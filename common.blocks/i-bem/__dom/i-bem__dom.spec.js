@@ -1,9 +1,33 @@
 modules.define(
     'spec',
-    ['i-bem__dom', 'objects', 'jquery', 'sinon', 'BEMHTML'],
-    function(provide, DOM, objects, $, sinon, BEMHTML) {
+    ['i-bem__dom', 'i-bem-dom', 'objects', 'jquery', 'sinon', 'BEMHTML', 'functions'],
+    function(provide, DOM, bemDom, objects, $, sinon, BEMHTML, functions) {
 
 describe('i-bem__dom', function() {
+    describe('Trying work with don\'t declarated blocks', function() {
+        it('findBlock* should throw error', function() {
+            DOM.decl('block');
+
+            var block = $(BEMHTML.apply({ block : 'block' })).bem('block');
+
+            [
+                'findBlockInside',
+                'findBlocksInside',
+                'findBlockOn',
+                'findBlocksOn',
+                'findBlockOutside',
+                'findBlocksOutside',
+            ].forEach(function(method) {
+                function find() {
+                    block[method]('block2');
+                }
+                find.should.throw(Error, 'Block \'block2\' not declarated');
+            });
+
+            delete DOM.blocks['block'];
+        });
+    });
+
     describe('getMod', function() {
         it('should return properly extracted mod from html', function() {
             DOM.decl('block', {});
@@ -262,6 +286,11 @@ describe('i-bem__dom', function() {
 
         var rootNode, rootBlock;
         beforeEach(function() {
+            DOM.decl('root');
+            DOM.decl('b1');
+            DOM.decl('b2');
+            DOM.decl('b3');
+
             rootNode = $(BEMHTML.apply(
                 {
                     block : 'root',
@@ -298,6 +327,8 @@ describe('i-bem__dom', function() {
             DOM.destruct(rootNode);
             delete DOM.blocks['root'];
             delete DOM.blocks['b1'];
+            delete DOM.blocks['b2'];
+            delete DOM.blocks['b3'];
         });
 
         it('should find all blocks by name', function() {
@@ -354,6 +385,7 @@ describe('i-bem__dom', function() {
 
         var rootNode, rootBlock;
         beforeEach(function() {
+            DOM.decl('root');
             rootNode = $(BEMHTML.apply(
                 {
                     block : 'root',
@@ -487,6 +519,7 @@ describe('i-bem__dom', function() {
     describe('drop elem cache', function() {
         var block;
         beforeEach(function() {
+            DOM.decl('b1');
             block = $(BEMHTML.apply({ block : 'b1', content : { elem : 'e1', elemMods : { m1 : 'v1' } } })).bem('b1');
         });
 
@@ -639,6 +672,7 @@ describe('i-bem__dom', function() {
     describe('DOM.detach', function() {
         it('should detach block and leave DOM node', function() {
             var spy = sinon.spy();
+            DOM.decl('block1');
             DOM.decl('block2', {
                 onSetMod : {
                     js : {
@@ -1189,6 +1223,65 @@ describe('i-bem__dom', function() {
 
             delete DOM.blocks['block1'];
         });
+
+        describe('on BEM events', function() {
+            var rootNode, spy;
+            beforeEach(function() {
+                spy = sinon.spy();
+
+                DOM.decl('block', {
+                    onSetMod : {
+                        'js' : {
+                            'inited' : spy
+                        }
+                    }
+                }, {
+                    live : function() {
+                        this._events(Block2).on('click', functions.noop);
+                        this._events(Block3).on('click', functions.noop);
+                        return true;
+                    }
+                });
+
+                var Block2 = DOM.decl('block2'),
+                    Block3 = bemDom.declBlock('block3');
+
+                rootNode = initDom({
+                    block : 'block',
+                    js : true,
+                    content : [
+                        {
+                            block : 'block2',
+                            js : true
+                        },
+                        {
+                            block : 'block3',
+                            js : true
+                        }
+                    ]
+                });
+            });
+
+            afterEach(function() {
+                delete DOM.blocks['block'];
+                delete DOM.blocks['block2'];
+                delete DOM.blocks['block3'];
+            });
+
+            it('should init block on BEM event', function() {
+                var block2 = rootNode.find('.block2').bem('block2');
+                spy.should.not.have.been.called;
+                block2.emit('click');
+                spy.should.have.been.called;
+            });
+
+            it('should init block on BEM event (bem-core-4)', function() {
+                var block3 = rootNode.find('.block3').bem('block3');
+                spy.should.not.have.been.called;
+                block3._emit('click');
+                spy.should.have.been.called;
+            });
+        });
     });
 
     describe('liveInitOnBlockInsideEvent', function() {
@@ -1231,6 +1324,47 @@ describe('i-bem__dom', function() {
             delete DOM.blocks['block1'];
             delete DOM.blocks['block2'];
         });
+
+        it('should init and call handler on live initialization (bem-core-4)', function() {
+            var spyInit = sinon.spy(),
+                spyHandler = sinon.spy();
+
+            DOM.decl('block1', {
+                onSetMod : {
+                    js : {
+                        inited : spyInit
+                    }
+                }
+            }, {
+                live : function() {
+                    this.liveInitOnBlockInsideEvent('event', 'block2', spyHandler);
+                }
+            });
+
+            bemDom.declBlock('block2', {}, {});
+
+            var rootNode = initDom({
+                    block : 'block1',
+                    js : true,
+                    content : {
+                        block : 'block2',
+                        js : true
+                    }
+                }),
+                block = rootNode.find('.block2').bem('block2');
+
+            spyInit.called.should.be.false;
+            spyHandler.called.should.be.false;
+
+            block._emit('event');
+
+            spyInit.called.should.be.true;
+            spyHandler.called.should.be.true;
+
+            DOM.destruct(rootNode);
+            delete DOM.blocks['block1'];
+            delete DOM.blocks['block2'];
+        });
     });
 
     describe('modules.define patching', function() {
@@ -1260,6 +1394,8 @@ describe('i-bem__dom', function() {
     describe('mod change events', function() {
         var block;
         beforeEach(function() {
+            DOM.decl('block');
+
             block = $(BEMHTML.apply(
                 {
                     block : 'block',
@@ -1371,5 +1507,13 @@ describe('i-bem__dom', function() {
 });
 
 provide();
+
+function createDomNode(bemjson) {
+    return DOM.init(BEMHTML.apply(bemjson));
+}
+
+function initDom(bemjson) {
+    return createDomNode(bemjson).appendTo(DOM.scope);
+}
 
 });
