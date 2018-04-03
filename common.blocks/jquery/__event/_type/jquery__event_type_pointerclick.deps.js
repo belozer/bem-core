@@ -1,4 +1,3 @@
 ({
-    mustDeps : 'jquery',
-    shouldDeps : 'next-tick'
+    mustDeps : 'jquery'
 })
