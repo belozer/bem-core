@@ -1,12 +1,11 @@
 ({
     shouldDeps : [
-        { elem : 'internal' },
-        'i-bem-4',
         'inherit',
         'identify',
-        'next-tick',
         'objects',
+        'jquery',
         'functions',
-        'events'
+        { block : 'i-bem-4', elem : 'internal' },
+        { elem : 'collection' }
     ]
 })

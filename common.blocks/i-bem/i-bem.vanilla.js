@@ -5,6 +5,7 @@
 modules.define(
     'i-bem',
     [
+        'i-bem-4',
         'i-bem__internal',
         'inherit',
         'identify',
@@ -15,6 +16,7 @@ modules.define(
     ],
     function(
         provide,
+        bem,
         INTERNAL,
         inherit,
         identify,
@@ -33,14 +35,14 @@ var undef,
      * @private
      * @type Array
      */
-    initFns = [],
+    initFns = bem._initFns,
 
     /**
      * Storage for block declarations (hash by block name)
      * @private
      * @type Object
      */
-    blocks = {};
+    blocks = bem.entities;
 
 /**
  * Builds the name of the handler method for setting a modifier
@@ -174,7 +176,7 @@ var BEM = inherit(events.Emitter, /** @lends BEM.prototype */ {
 
         initImmediately !== false?
             this._init() :
-            initFns.push(this._init, this);
+            bem.pushInitFns(this._init, this);
     },
 
     /**
@@ -183,6 +185,11 @@ var BEM = inherit(events.Emitter, /** @lends BEM.prototype */ {
      */
     _init : function() {
         return this.setMod('js', 'inited');
+    },
+
+    /** for i-bem-4 */
+    _setInitedMod : function() {
+        return this._init();
     },
 
     /**
@@ -731,23 +738,6 @@ var BEM = inherit(events.Emitter, /** @lends BEM.prototype */ {
      * @returns {String|undefined}
      */
     _extractElemNameFrom : function(elem) {},
-
-    /**
-     * Executes the block init functions
-     * @private
-     */
-    _runInitFns : function() {
-        if(initFns.length) {
-            var fns = initFns,
-                fn, i = 0;
-
-            initFns = [];
-            while(fn = fns[i]) {
-                fn.call(fns[i + 1]);
-                i += 2;
-            }
-        }
-    }
 });
 
 provide(BEM);
