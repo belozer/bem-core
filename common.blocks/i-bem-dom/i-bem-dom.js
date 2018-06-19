@@ -154,7 +154,7 @@ function initEntity(entityName, domElem, params, ignoreLazyInit, callback) {
 
     if(entityCls.__bemEntity) {
         entityCls._processInit();
-        needInit = !entityCls.lazyInit || ignoreLazyInit || params.lazyInit === false;
+        needInit = ignoreLazyInit || params.lazyInit === false || !entityCls.lazyInit && !params.lazyInit;
     } else {
         // for bem-core-3 blocks
         entityCls._liveInitable = !!entityCls._processLive();
